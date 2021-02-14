@@ -33,9 +33,65 @@ And you should see the newly availble commands. Type help <COMMAND> to get the c
 
 
 
+# Examples
+More examples are in the tests folder
+## Generte spline catalog
+
+~~~
+@kosma-init
+
+sic mkdir spline_output
+! kalibrate -d /data/sofia/data/fits/science_data/cycle_07/20190607_CLARENCE_HFA_LFA/ -s 31064 -F *HFAV_PX04* -m curfit=simplex -m tau=1 -m feff=0.97 -m skyhotobs=1 -m skyhotfit=1  -m hotcoldcal=1 -m write_tsys=1 -n 9999999 -m calfactors=1 -m common=1 -c spline_test_data.kosma -m skydiff=20
+
+define structure kosma
+file in data/spline_test_data.kosma
+find
+set unit v
+set win -300 -180 20 40
+! 
+! generate spline archive
+!
+set source *diff*
+find
+for i 1 to found
+    get n
+    ! smooth level is important
+    ! baseline features can be below the noise and 
+    ! 40 is a good value for the typical HFAV/LFAV baseline structure
+    smooth box 40
+    spline /fit_spline /store_spline_in_archive -
+           /spline_archive_filename spline_output/spline_archive_'telescope'.pkl-
+           /logging_level info -
+           /output_plots_path spline_output/
+next
+
+! apply spline and write spectr
+! write spectra
+file out spline_output/spline_test_output.kosma single /overwrite
+set source SGRB2_CMZ
+set mode y -100 100
+find
+for i 1 to found
+    get n
+    write
+    get
+    despike
+    KOSMA\SPLINE /scale_spline_from_archive /spline_archive_filename spline_output/spline_archive_'telescope'.pkl -
+                 /logging_level info  /search_scan_range 25 -
+                 /spline_fit_type scale_spline_and_offset -
+                 /smoothness_of_fit_data 50 /plot save_best_with_pickle -
+                 /output_plots_path spline_output/
+    let ry kosma%spline_corrected
+    mod source 'source[:8]'_SPL
+    write
+next
+
+exit
+~~~
 
 ## generate index table from class and plotting values
 
+~~~
     @kosma-init
     file in "tests/data/multiline.kosma"
     find
@@ -49,9 +105,10 @@ And you should see the newly availble commands. Type help <COMMAND> to get the c
     ! for more options
     plot_index /help
     ! click on point to show spectra
+~~~
 
-# getting python-gildas to work
 
+# python-gildas Background 
 see instructions here:
 
 <https://www.iram.fr/IRAMFR/GILDAS/doc/pdf/gildas-python.pdf>
