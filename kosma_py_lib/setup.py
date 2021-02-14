@@ -10,5 +10,5 @@ setup(name='kosma_py_lib',
       author='Christof Buchbender',
       author_email='buchbend@ph1.uni-koeln.de',
       license='MIT',
-      install_requires=["pandas==0.22","jinja2","pyyaml", "sklearn", "astroML","pytz"],
+      install_requires=["pandas==0.22","numpy==1.16.5","jinja2","pyyaml","pytz"],
       zip_safe=False)

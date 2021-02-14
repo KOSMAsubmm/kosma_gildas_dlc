@@ -33,9 +33,6 @@ define command kosma\plot_unique "python kosma_py/plot_unique.py"
 define command kosma\plot_group "python kosma_py/plot_group.py"
 define command kosma\fft "python kosma_py/fft.py"
 define command kosma\find_poly "python kosma_py/find_poly.py"
-define command kosma\init_dict "@kosma_py/dictionary.class"
-define command kosma\set_dict "@set_dict"
-define command kosma\get_dict "@get_dict"
 define command kosma\string_in "python kosma_py/string_in.py"
 !
 ! script to generate and process pandas index
@@ -49,7 +46,6 @@ define command kosma\spline "python kosma_py/spline.py"
 
 define command kosma\windows "@set_windows_from_map"
 define command kosma\fft_focus "@fft_focus"
-kosma\init_dict
 !
 endif
 !
