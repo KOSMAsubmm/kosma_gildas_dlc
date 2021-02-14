@@ -1,0 +1,228 @@
+begin procedure smooth_down
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! Initial Setup
+    set unit c
+    set wind 1000 1001
+    set unit v
+
+    if .not.exist(chi_sq) then
+       def real chi_sq /global
+    endif
+
+    if exist(measured_sigmas) then
+    del /var measured_sigmas
+    endif
+
+    if exist(reference_sigmas) then
+       del /var reference_sigmas
+    endif
+
+    if exist(calculated_sigmas) then
+       del /var calculated_sigmas
+    endif
+
+    if exist(freq_steps) then
+       del /var freq_steps
+    endif
+
+    def real mean_tau
+    def real mean_tsys
+    def real theoretical_sigma
+    def int first_channel last_channel
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! Cut blanked channels on either side
+    let first_channel 1
+    let last_channel 'channels'
+    if ry[1].eq.r%head%spe%bad then
+    for i 1 to channels
+    if ry[i].ne.r%head%spe%bad then
+    let first_channel i
+    break
+    endif
+    next
+    endif
+
+    if ry[channels].eq.r%head%spe%bad then
+    for i channels to 1 by -1
+    if ry[i].ne.r%head%spe%bad then
+    let last_channel i
+    break
+    endif
+    next
+    endif
+
+    extract 'first_channel' 'last_channel' c
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! Calculate how many times the spectrum can be
+    ! smoothed by a factor of two
+    ! x = log_2(N_channels)
+    def int iterations
+
+    let iterations 'floor(log(channels)/log(2))-1'
+    def real measured_sigmas['iterations+1'] /global
+    def real calculated_sigmas['iterations+1'] /global
+    def real reference_sigmas['iterations+1'] /global
+    def real freq_steps['iterations+1'] /global
+
+
+
+    for i 1 to iterations
+        compute mean_tsys median r%assoc%tsys%data
+        compute mean_tau median r%assoc%tau%data
+        let theoretical_sigma 'sqrt(2)*mean_tsys/(sqrt(abs(freq_step)*1e6*time))*exp(mean_tau/sin(elevation))'
+        if i.eq.1 then
+           bas 0
+           let reference_sigmas[1] 'sigma'
+           let measured_sigmas[1] 'sigma'
+           let calculated_sigmas[1] 'theoretical_sigma'
+           let freq_steps[1] 'freq_step'
+        endif
+        sm b 2
+        bas 0
+        compute mean_tsys mean r%assoc%tsys%data
+        compute mean_tau mean r%assoc%tau%data
+        let theoretical_sigma 'sqrt(2)*mean_tsys/(sqrt(abs(freq_step)*1e6*time))*exp(mean_tau/sin(elevation))'
+
+        let reference_sigmas['i+1'] 'reference_sigmas[i]/sqrt(2)'
+        let measured_sigmas['i+1'] sigma
+        let calculated_sigmas['i+1'] theoretical_sigma
+        let freq_steps['i+1'] freq_step
+
+        next
+
+    ! Calculate Chi square
+    let chi_sq 0
+
+    for i 1 to iterations+1
+        let chi_sq chi_sq+(measured_sigmas[i]-reference_sigmas[i])**2/reference_sigmas[i]
+    next
+
+end procedure
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+begin procedure running_average
+
+    set unit c
+    set wind 1000 1001
+    set unit v
+
+
+    if  exist(running_statistic) then
+       del /var running_statistic
+    endif
+
+    if  exist(mean_tsys) then
+       del /var mean_tsys
+    endif
+
+    if  exist(mean_tau) then
+       del /var mean_tau
+    endif
+
+    if  exist(run_avg) then
+       del /var run_avg
+    endif
+
+    if  exist(xy) then
+       del /var xy
+    endif
+
+
+
+    def real running_statistic /global
+    def real mean_tsys /global
+    def real mean_tau /global
+
+    def real avg_channels
+    let avg_channels &1
+
+    def real alpha
+    let alpha &2
+    let alpha 'sqrt(alpha)'
+
+    def int start_channel
+    def real end_channel
+    def int first_channel last_channel
+    def int num_chunks[8]
+
+    def real theoretical_sigma
+    def real this_sigma
+    def real missing_channels
+    def int chunks
+    def real this_tau
+    def real this_tsys
+
+
+    ! Cut blanked channels on either side
+    let first_channel 1
+    let last_channel 'channels'
+    if ry[1].eq.r%head%spe%bad then
+    for i 1 to channels
+    if ry[i].ne.r%head%spe%bad then
+    let first_channel i
+    break
+    endif
+    next
+    endif
+
+    if ry[channels].eq.r%head%spe%bad then
+    for i channels to 1 by -1
+    if ry[i].ne.r%head%spe%bad then
+    let last_channel i
+    break
+    endif
+    next
+    endif
+
+    extract 'first_channel' 'last_channel' c
+
+    bas 0
+
+
+    let chunks 'floor(channels/avg_channels)'
+
+    def real run_avg[chunks]
+    def real xy /like ry /global
+
+
+    for i 1 to 'chunks'
+        if i.eq.1 then
+            let start_channel 1
+         else
+            let start_channel 'end_channel+1'
+        endif
+        let end_channel 'start_channel+avg_channels-1'
+        if end_channel.gt.channels then
+           let end_channel channels
+        endif
+        compute run_avg[i] rms ry['start_channel':'end_channel']
+        compute this_tau mean r%assoc%tau%data['start_channel':'end_channel']
+        compute this_tsys mean r%assoc%tsys%data['start_channel':'end_channel']
+        compute mean_tsys mean r%assoc%tsys%data
+        compute mean_tau mean r%assoc%tau%data
+
+        let theoretical_sigma 'sqrt(2)*this_tsys/(sqrt(abs(freq_step)*1e6*time))*exp(this_tau/sin(elevation))'
+        let run_avg[i] run_avg[i]/theoretical_sigma
+        let xy['start_channel':'end_channel'] (run_avg[i])
+        next
+    compute running_statistic sum run_avg
+    ! exa chunks
+    ! exa running_statistic
+    let running_statistic running_statistic/chunks
+    ! exa running_statistic
+    ! exa run_avg
+end procedure
+
+
+begin procedure noise_flag
+    def real avg_channels
+    def real cutoff
+    let avg_channels &1
+    let cutoff &1
+    @running_average avg_channels
+    let ry ry%head%spe%bad /where xy.gt.cutoff
+end procedure

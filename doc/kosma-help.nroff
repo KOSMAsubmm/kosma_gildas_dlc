@@ -1,0 +1,115 @@
+.ec _
+.ll 76
+.ad b
+.in 4
+.\"====================================================================
+.ti -4
+1 Language KOSMA\ Expansion scripts for GILDAS
+
+Available commands:
+.in +4
+.nf
+GLOB      read a list of file from a directory
+DESPIKE   DESPIKE current spectrum using a wavelet 
+.fi
+.in -4
+
+For more information of each command, type 'help <command>'
+.\"====================================================================  
+.ti -4
+1 GLOB
+.ti +4
+[WEEDS_\]LFIND [SPECIES [FMIN FMAX]] [/SORTBY ORDER] [/ENERGY ENERGY]
+[/AIJ AMIN]
+  
+Find the lines within a frequency range and create a line index. The
+command looks for the lines between FMIN and FMAX (default is the
+frequency range covered by the current R spectrum) in the database
+selected with the USE IN command. If not specified, the values of FMIN
+and FMAX are taken from the current spectra.
+
+Arguments:
+.in +13
+.ti -9
+SPECIES_ _ the name of the species. Default is "All".
+.ti -9
+FMIN_ _ _ _ _ the minimum frequency in MHz. Default is the current R
+spectrum minimum limit.
+.ti -9
+FMAX_ _ _ _ _ the maximum frequency in MHz. Default is the current R
+spectrum maximum limit.
+.in -13
+
+Options:
+.in +14
+.ti -10
+/SORTBY_ _ _ sort the lines according to ORDER, which can be any
+combination of "frequency", "energy" and "aeinstein", and all the
+subsequent permutations.
+
+.ti -10
+/ENERGY_ _ _ refine the search to lines with upper level energy lower
+than ENERGY, expressed in Kelvins.
+
+.ti -10
+/AIJ_ _ _ _ _ _ refine the search to lines with einstein A coefficient
+greater than AMIN, expressed s-1.
+
+.in -14
+.\"====================================================================
+.ti -4
+1 DESPIKE
+.ti +4
+[WEEDS_\]LGET [Key|Num] [/INDEX]
+  
+Get a line from the line index. The commands checks if the line
+frequency is covered by the current observation. If yes, the
+observation is modified so that its rest frequency corresponds to the
+line frequency. The command works in a similar fashion than GET: for
+example LGET F will get the first line in the line list, LGET N will
+get the next one, etc. It is especially useful when one want to search
+for lines of a given species. For example, one can list all methanol
+lines in the 3 mm band, ordered by increasing upper level energy,
+with:
+
+.nf
+  LAS> LLIST "CH3OH, vt=0,1" 80000 110000 /SORTBY e
+.fi
+
+and then examine each of the line candidates with:
+
+.nf
+  LAS> LGET F
+  LAS> LPLOT
+  LAS> LGET N
+  LAS> LPLOT
+  LAS> ...
+.fi
+
+Options:
+.in +10
+.ti -8
+/INDEX_ _ search for the line in all the observations of the current
+observation index. If this option is set, LGET begins by searching for
+the first observation (from the last FIND command) that covers the
+line frequency. It is useful when working with line surveys that
+consists in several observations, each covering a different frequency
+band.
+.in -10
+
+Argument: it can be either
+.in +7
+1) One of the following key letters:
+.in +3
+"f"_ _ _ get the first line of the index
+.br
+"l"_ _ _ get the last line of the index
+.br
+"p"_ _ _ get the previous line in the index
+.br
+"n"_ _ _ get the next line of the index
+.in -3
+2) An integer
+.in -7
+.\"====================================================================
+.ti -4

@@ -1,0 +1,27 @@
+file in data/single_array_test_data.sofia
+file out tmp/test_assoc_line.sofia single /overwrite
+set source NGC1977_BOX2
+find
+
+
+
+def real zscore
+def real rms mean median zscore_factor
+
+set unit v
+set mode x -20 20
+set mode y -20 40
+
+for i 1 to found 
+  get n
+  plot
+  let zscore_factor 2.0
+  @line_flagging 'zscore_factor'
+  set win /associated
+  draw win
+  base 0
+  pen 1
+  spec
+  write
+next
+

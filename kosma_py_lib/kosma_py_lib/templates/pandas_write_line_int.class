@@ -1,0 +1,94 @@
+{# Local Variables: #}
+{# mode: jinja2 #}
+{# End: #}
+
+@kosma-init
+
+
+file in "{{ input_file }}"
+say "getting rms data"
+
+
+if .not.exist(error_flag) then;
+   def int error_flag /global
+endif
+
+on error let error_flag 1
+
+set var user
+import sofia
+
+set unit v
+
+{% if windows != "" %}
+set window {{ windows }}
+{% endif %}
+
+
+
+find /all
+
+if set%las%wind2[1].eq.0 then
+   say "ERROR: no windows set, no rms column added taken"
+   exit 0
+endif
+
+sic message class s-f
+sic message class -FEWRIU
+sic message sic -FEWRIU
+SIC MESSAGE GLOBAL ON
+
+sic output "{{memory_dir}}/pandas_line_int.csv"
+! columns
+
+
+!
+! write table header
+!
+def char*1000 output_header
+def char*1000 output_line
+let output_header "index,number,version,line_int_mean,line_int_total,line_int_per_kms"
+say 'output_header'
+set unit v
+
+def real max_win_int_win
+def real min_win_int_win
+def real mean sum line_int_per_kms
+
+let max_win_int_win {{ max_win_int_win }}
+let min_win_int_win {{ min_win_int_win }}
+
+! loop over file
+for i 1 to found
+    get n
+    if exist(R%ASSOC%line%data) then
+       set window /ASSOCIATED
+    else
+       set window {{ windows }}
+    endif
+    ! base 0 to bring level down
+    ! use windows set from class
+    base 0
+    ! integrate only over region given in option
+    if error_flag.eq.0 then
+        ! compute integrated intensity, set all to bad outside of the line region
+        let ry R%HEAD%SPE%BAD /where rx.lt.min_win_int_win.or.rx.gt.max_win_int_win 
+        !
+        compute mean mean ry /blanking R%HEAD%SPE%BAD
+        compute sum sum ry /blanking R%HEAD%SPE%BAD        
+        let line_int_per_kms 'sum/abs(max_win_int_win-min_win_int_win)'
+        !
+        output_line = 'IDX%IND[i]'","'number'","'R%HEAD%GEN%VER'","'mean','sum','line_int_per_kms'
+    else
+        output_line = 'IDX%IND[i]'","'number'","'R%HEAD%GEN%VER'",9999,9999,9999"
+        let error_flag 0
+    endif
+    ! write line to file
+    say 'output_line'
+    !
+    let error_flag 0
+    sic message class s+i
+next
+
+sic output
+exit

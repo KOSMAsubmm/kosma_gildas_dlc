@@ -1,0 +1,37 @@
+{# Local Variables: #}
+{# mode: jinja2 #}
+{# End: #}
+
+file in "{{ input_file }}"
+!sic message class s-i
+
+sic message class s-f
+sic message class -FEWRIU
+sic message sic -FEWRIU
+SIC MESSAGE GLOBAL ON
+
+
+set var user
+import sofia
+
+sic output "{{memory_dir}}/scan_aot_aor.csv"
+{% for scan in scans %}
+find /scan {{ scan }} {{ scan }}
+get f
+if exist(r%user%sofia%aot_id) then
+    if r%user%sofia%aot_id_len.gt.0 then
+        say 'scan'","'r%user%sofia%mission_id'","'r%user%sofia%aot_id'","'r%user%sofia%aor_id'","'r%user%sofia%posangle'","'utobs'","'r%head%gen%cdobs'
+    else
+        if len_trim(r%user%sofia%aor_id).eq.0 then
+            say 'scan'","'r%user%sofia%mission_id'",none,11111111,"'r%user%sofia%posangle'","'utobs'","'r%head%gen%cdobs'
+        else
+            say 'scan'","'r%user%sofia%mission_id'",none,"'r%user%sofia%aor_id'","'r%user%sofia%posangle'","'utobs'","'r%head%gen%cdobs'
+        endif
+    endif
+endif
+{% endfor %}
+sic message class s+i
+
+
+sic output
+exit

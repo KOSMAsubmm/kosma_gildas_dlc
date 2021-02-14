@@ -1,0 +1,50 @@
+file in data/spline_test_data.kosma
+find
+set mode y -400 400
+get f
+plot
+despike
+spec /pen 1
+ha tmp/despike_default_flagged_bad.png /device png /overwrite
+
+set mode y tot
+
+get f
+set unit c
+plot
+despike /use_associated_array
+let ry  r%assoc%bad%data
+!set mode y 0 500
+spec /pen 1
+ha tmp/despike_assoc_array.png /device png /overwrite
+
+! lookup table
+sys "python  data/generate_despike_table.py"
+get f
+despike /lookup_table data/despike_lookup_table.pkl /use_associated_array 
+plot
+let ry  r%assoc%bad%data
+set mode y tot
+spec /pen 1
+
+ha tmp/despike_lookup_table.png /device png /overwrite 
+
+! despike option with assoc
+get f
+despike /blank_ranges 7000 8000 /blank_ranges 1000 3000  /use_associated_array
+plot
+let ry  r%assoc%bad%data
+set mode y tot
+spec /pen 1
+ha tmp/despike_blank_command_line_option.png /device png /overwrite 
+
+! despike option commandline options with noise
+get f
+set mode y -400 400
+plot
+despike /blank_ranges 7000 8000 /blank_ranges 1000 3000  /noise
+spec /pen 1
+ha tmp/despike_blank_command_line_option_noise.png /device png /overwrite 
+
+
+exit

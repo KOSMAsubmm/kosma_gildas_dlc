@@ -1,0 +1,9 @@
+@kosma-init
+file in "data/spline_test_data.kosma"
+find
+set unit v
+set win 0 1
+
+get_index /get_stats_over_range 0 50 v /get_stats_over_range 7000 8000 c /reload
+!plot_index /xaxis number /yaxis line_int_mean /yaxis line_int_total /yaxis line_int_per_kms /group_by telescope /save_filename tmp/test.png
+exit

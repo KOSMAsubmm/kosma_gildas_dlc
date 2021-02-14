@@ -1,0 +1,72 @@
+file in "data/map_line_windowing.kosma"
+find
+
+def char*200 output_folder
+let output_folder tmp/
+
+! map first pass map
+set unit v
+set win -20 20
+set weight equal
+! map params
+let map%beam 6.3
+let map%reso map%beam*1.05
+let map%cell '-map%beam/4.' 'map%beam/4.'
+let name 'output_folder'full_map_pixels
+! first make general map and use it's grid later
+table 'name' new /nocheck cal
+xy_map 'name'
+
+! export map and establish rough rms level
+file out "tmp/map_spectra.sofia" single /overwrite
+lmv 'name'
+file in "tmp/map_spectra.sofia"
+find
+def real rms_array[found]
+for i 1 to found
+   get n
+   base 0
+   let rms_array[i] R%HEAD%BAS%SIGFI
+next
+
+! get mean RMS
+def real mean_rms
+compute mean_rms mean rms_array
+
+
+! run adaptive window tool flag every above 3*mean_rms of map
+@set_windows_from_map "data/map_line_windowing.kosma" 'name'.lmv '3*mean_rms'
+! creates 2 outputs
+!  * data/map_line_windowing_masked.kosma
+!  * map_line_windowing_map.lmv
+
+
+! load in line masked class file
+! plot to show line masks, base 0 and export
+! baselining should be better now
+file in data/map_line_windowing_masked.kosma
+file out 'output_folder'map_line_windowing_masked_baseline.kosma single /overwrite
+find
+set mode y -100 100
+for i 1 to found
+   get n
+   set window /associated
+   plot
+   draw window /pen 1
+   !let ry R%HEAD%SPE%BAD /where r%assoc%line%data.eq.1
+   !spec /pen 2
+   base 0
+   write
+next
+
+
+! remake map with baseline associated windows
+file in 'output_folder'map_line_windowing_masked_baseline.kosma
+find
+let name 'output_folder'full_map_pixels_with_masked
+! first make general map and use it's grid later
+table 'name' new /nocheck cal
+xy_map 'name'
+let name 'name'
+!go view
+exit

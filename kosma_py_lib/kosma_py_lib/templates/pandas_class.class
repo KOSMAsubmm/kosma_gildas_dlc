@@ -1,0 +1,14 @@
+{# Local Variables: #}
+{# mode: jinja2 #}
+{# End: #}
+
+file in "{{ input_file }}"
+find
+sic message class s-i
+
+sic output "{{memory_dir}}/idx.csv"
+find
+for i 1 to found
+say 'idx%teles[i]'","'idx%scan[i]'","'idx%subscan[i]'","'idx%loff[i]'","'idx%line[i]'","'idx%sourc[i]'","'R%HEAD%GEN%VER'","'idx%num[i]'","'IDX%IND[i]'
+next
+sic message class s+i

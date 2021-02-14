@@ -1,0 +1,382 @@
+begin procedure run_init_dict
+ say "command not available, run kosma\init_dict first"
+end procedure run_init_dict
+
+
+! array plotting
+begin procedure plot_hexagon
+    clear
+    define real box_size[2] box0[2] box1[2] box2[2] box3[2] box4[2] box5[2] box6[2]
+    define real margin
+    define integer pix
+    define char whicharray*4
+    !
+    let whicharray &1
+    set char 0.25
+    let margin 0.7
+    let box_size 8 6
+    let box0 15 10
+    let box1 box0[1]-box_size[1]|2-margin|2 box0[2]+box_size[2]+margin
+    let box2 box0[1]-box_size[1]-margin box0[2]
+    let box3 box0[1]-box_size[1]|2-margin|2 box0[2]-box_size[2]-margin
+    let box4 box0[1]+box_size[1]|2+margin|2 box0[2]-box_size[2]-margin
+    let box5 box0[1]+box_size[1]+margin box0[2]
+    let box6 box0[1]+box_size[1]|2+margin|2 box0[2]+box_size[2]+margin
+    !
+    for l 0 to 6
+        let pix l
+        g\set box box'pix'[1]-box_size[1]|2 box'pix'[1]+box_size[1]|2 box'pix'[2]-box_size[2]|2 box'pix'[2]+box_size[2]|2
+        find /tel *'whicharray'*'pix'*
+        box
+        get f
+        smoo bo 10
+        pen /col 0
+        spec
+        if kosma%write_group_spectra.eq.1
+            write
+        endif
+        get n
+        pen /col 3
+        spec
+        pen /col 0
+        g\set coord box 1
+        g\draw t 1 1 ""'whicharray'"_"'pix'"" 6
+    next l
+    set sub
+    find
+end procedure plot_hexagon
+
+begin procedure plot_hexagon_pixel
+    define real box_size[2] box0[2] box1[2] box2[2] box3[2] box4[2] box5[2] box6[2]
+    define real margin
+    define integer pix
+    define integer pen_color
+    define char*100 plot_type
+    !
+    let pix &1
+    let pen_color &2
+    let plot_type &3
+    set char 0.25
+    let margin 0.7
+    let box_size 8 6
+    let box0 15 10
+    let box1 box0[1]-box_size[1]|2-margin|2 box0[2]+box_size[2]+margin
+    let box2 box0[1]-box_size[1]-margin box0[2]
+    let box3 box0[1]-box_size[1]|2-margin|2 box0[2]-box_size[2]-margin
+    let box4 box0[1]+box_size[1]|2+margin|2 box0[2]-box_size[2]-margin
+    let box5 box0[1]+box_size[1]+margin box0[2]
+    let box6 box0[1]+box_size[1]|2+margin|2 box0[2]+box_size[2]+margin
+    ! select box to add plot to
+    g\set box box'pix'[1]-box_size[1]|2 box'pix'[1]+box_size[1]|2 box'pix'[2]-box_size[2]|2 box'pix'[2]+box_size[2]|2
+    say 'plot_type'
+    pen 0
+    if plot_type.eq."spectrum" then
+        pen 0
+        box
+        pen 'pen_color'
+        spec /pen 'pen_color'
+        g\set coord box 1
+        pen 0
+        g\draw t 1 1 "pixel"'pix'"" 6
+    else if plot_type.eq."index" then
+        load /nocheck
+        pen 0
+        box /index
+        spec /index
+        g\set coord box 1
+        pen /colour white
+        g\draw t 1 1 "pixel"'pix'"" 6
+        pen /colour black
+    else if plot_type.eq."stamp" then
+        stamp
+        g\set coord box 1
+        pen 0
+        g\draw t 1 1 "pixel"'pix'"" 6
+    endif
+
+
+end procedure plot_hexagon_pixel
+
+
+begin procedure load_file_into_array
+    def char*1000 filename
+    let filename "&1"
+    !
+    def char*1000 array_name
+    let array_name &2
+    def char*1000 array_name_len
+    let array_name_len &2_len
+    if exist('array_name_len') then
+        del /variable 'array_name_len'
+    endif
+    def int 'array_name_len' /global
+    !
+    ! get number of lines in file
+    compute 'array_name_len' LINES 'filename'
+    ! define input array
+    if exist('array_name') then
+        del /variable 'array_name'
+    endif
+    def int 'array_name'['array_name_len'] /global
+    say "Loading "'filename'" into variable "'array_name'
+    accept 'array_name' /array 'filename'
+
+end procedure load_file_into_array
+
+
+
+begin procedure write_array_into_file
+    def char*1000 filename
+    let filename "&1"
+    def int dim[8]
+    compute dim dimof &2
+    sic output 'filename'
+    for i 1 to dim[1]
+       say '&2[i]'
+    next
+    sic output
+end procedure write_array_into_file
+
+
+
+begin procedure set_windows_from_map
+    def char*1000 class_filename
+    def char*1000 master_map
+    def real rms_level
+    let class_filename "&1"
+    let master_map "&2"
+    let rms_level &3
+    say 'class_filename' 'master_map' 'rms_level'
+    !!!!!!!!!!!!!!!!!!!!!!!
+    ! generate mask map
+    !!!!!!!!!!!!!!!!!!!!!!!
+    def char*1000 mask_map
+    def char*1000 filename_base_map filename_ext_map directory_map
+    sic parse 'master_map' filename_base_map filename_ext_map directory_map
+    image 'master_map'
+    let mask_map 'directory_map''filename_base_map'_mask.'filename_ext_map'
+    sic copy 'master_map' 'mask_map'
+    ! Load the variables with which we will work
+    define image cube 'master_map' read
+    define header head 'master_map' read
+    define image master_map_mask 'mask_map' write
+
+    let master_map_mask[,,] 0
+    !
+    def real cube_plane /like cube[,,1]
+    for plane 1 to 'cube%dim[3]'
+        let cube_plane abs(cube[,,plane])
+        let master_map_mask[,,plane] 0 /where (cube_plane.lt.'rms_level').and.(cube_plane.ne.cube%blank[1])
+        let master_map_mask[,,plane] 1 /where (cube_plane.ge.'rms_level').and.(cube_plane.ne.cube%blank[1])
+        let master_map_mask[,,plane] 0 /where (cube_plane.eq.cube%blank[1])
+        !let master_map_mask[,,plane] 0 /where (cube[,,plane].lt.'rms_level').and.(cube[,,plane].ne.cube%blank[1])
+        !let master_map_mask[,,plane] 1 /where (cube[,,plane].ge.'rms_level').and.(cube[,,plane].ne.cube%blank[1])
+        !let master_map_mask[,,plane] 0 /where (cube[,,plane].eq.cube%blank[1])
+    next
+    !!!!!!!!!!!!!!!!!!!!
+    ! load class data
+    !!!!!!!!!!!!!!!!!!!!
+    file in 'class_filename'
+    def char*1000 filename_base_class filename_ext_class directory_class
+    sic parse 'class_filename' filename_base_class filename_ext_class directory_class
+    !
+    def char*1000 output_filename
+    let output_filename 'directory_class''filename_base_class'_masked.'filename_ext_class'
+    file out 'output_filename' single /overwrite
+    say "writing windowed data to "'output_filename'
+    find
+    !
+    define double mylamb mybeta
+    define int ilamb ibeta
+    !
+    if exist(mask) then
+       del /var mask
+    endif
+    def int mask['master_map_mask%dim[3]']
+
+    set unit v
+    for i 1 to found
+        let mask 0
+        get n
+        set unit v
+        ! find nearest neighbour positions
+        resample master_map_mask%dim[3] master_map_mask%convert[1,3] master_map_mask%convert[2,3] master_map_mask%convert[3,3] v - 1
+        let mylamb  'master_map_mask%A0-lambda+R%HEAD%POS%LAMOF'
+        let mybeta 'master_map_mask%D0-beta+R%HEAD%POS%BETOF'
+        let ilamb nint(master_map_mask%convert[1,1]+(mylamb-master_map_mask%convert[2,1])/master_map_mask%convert[3,1])
+        let ibeta nint(master_map_mask%convert[1,2]+(mybeta-master_map_mask%convert[2,2])/master_map_mask%convert[3,2])
+
+        if (ilamb.le.0).or.(ilamb.gt.master_map_mask%dim[1]) then
+           let mask 1 /where rx.gt.win_def_low.and.rx.lt.win_def_high
+           say "default"
+        else if (ibeta.le.0).or.(ibeta.gt.master_map_mask%dim[2]) then
+           let mask 1 /where rx.gt.win_def_low.and.rx.lt.win_def_high
+           say "default"
+        else
+           let mask master_map_mask[ilamb,ibeta,]
+        endif
+        if exist(R%ASSOC%line%data) then
+            associate line /delete
+            associate bad /delete
+        endif
+        ! assign window to associated array
+        associate line mask
+        !
+        quiet
+        write number
+    next
+
+end procedure set_windows_from_map
+
+
+begin procedure line_detection
+    def char*1000 class_filename
+    def char*1000 master_map
+    def real rms_level
+    let class_filename "&1"
+    let master_map "&2"
+    let rms_level &3
+    say 'class_filename' 'master_map' 'rms_level'
+    !!!!!!!!!!!!!!!!!!!!!!!
+    ! generate mask map
+    !!!!!!!!!!!!!!!!!!!!!!!
+    def char*1000 mask_map
+    def char*1000 filename_base_map filename_ext_map directory_map
+    sic parse 'master_map' filename_base_map filename_ext_map directory_map
+    image 'master_map'
+    let mask_map 'directory_map''filename_base_map'_mask.'filename_ext_map'
+    sic copy 'master_map' 'mask_map'
+    ! Load the variables with which we will work
+    define image cube 'master_map' read
+    define header head 'master_map' read
+    define image master_map_mask 'mask_map' write
+
+    let master_map_mask[,,] 0
+    !
+    def real cube_plane /like cube[,,1]
+    for plane 1 to 'cube%dim[3]'
+        let cube_plane abs(cube[,,plane])
+        let master_map_mask[,,plane] 0 /where (cube_plane.lt.'rms_level').and.(cube_plane.ne.cube%blank[1])
+        let master_map_mask[,,plane] 1 /where (cube_plane.ge.'rms_level').and.(cube_plane.ne.cube%blank[1])
+        let master_map_mask[,,plane] 0 /where (cube_plane.eq.cube%blank[1])
+    next
+    !!!!!!!!!!!!!!!!!!!!
+    ! load class data
+    !!!!!!!!!!!!!!!!!!!!
+    file in 'class_filename'
+    def char*1000 filename_base_class filename_ext_class directory_class
+    sic parse 'class_filename' filename_base_class filename_ext_class directory_class
+    !
+    def char*1000 output_filename
+    let output_filename 'directory_class''filename_base_class'_masked.'filename_ext_class'
+    file out 'output_filename' single /overwrite
+    say "writing windowed data to "'output_filename'
+    find
+    !
+    define double mylamb mybeta
+    define int ilamb ibeta
+    !
+    if exist(mask) then
+       del /var mask
+    endif
+    def int mask['master_map_mask%dim[3]']
+
+    set unit v
+    for i 1 to found
+        let mask 0
+        get n
+        set unit v
+        ! find nearest neighbour positions
+        resample master_map_mask%dim[3] master_map_mask%convert[1,3] master_map_mask%convert[2,3] master_map_mask%convert[3,3] v - 1
+        let mylamb  'master_map_mask%A0-lambda+R%HEAD%POS%LAMOF'
+        let mybeta 'master_map_mask%D0-beta+R%HEAD%POS%BETOF'
+        let ilamb nint(master_map_mask%convert[1,1]+(mylamb-master_map_mask%convert[2,1])/master_map_mask%convert[3,1])
+        let ibeta nint(master_map_mask%convert[1,2]+(mybeta-master_map_mask%convert[2,2])/master_map_mask%convert[3,2])
+
+        if (ilamb.le.0).or.(ilamb.gt.master_map_mask%dim[1]) then
+           let mask 1 /where rx.gt.win_def_low.and.rx.lt.win_def_high
+           say "default"
+        else if (ibeta.le.0).or.(ibeta.gt.master_map_mask%dim[2]) then
+           let mask 1 /where rx.gt.win_def_low.and.rx.lt.win_def_high
+           say "default"
+        else
+           let mask master_map_mask[ilamb,ibeta,]
+        endif
+        if exist(R%ASSOC%line%data) then
+            associate line /delete
+            associate bad /delete
+        endif
+        ! assign window to associated array
+        associate line mask
+        !
+        quiet
+        write number
+    next
+
+end procedure line_detection
+
+
+begin procedure line_flagging
+  def real rms mean median
+  def real zscore_factor
+  let zscore_factor &1
+  def real zscore /like ry
+  compute rms RMS ry /blanking R%HEAD%SPE%BAD
+  compute mean MEAN ry /blanking R%HEAD%SPE%BAD
+  compute median MEAN ry /blanking R%HEAD%SPE%BAD
+  ! consider dropping
+  if exist(R%ASSOC%line%data) then
+      associate line /delete
+      !associate zscore /delete
+      !def real zscore_factor
+  endif
+  !
+  def int line[channels]
+  !
+  !say 'rms' 'mean' 'ry' 'zscore_filter'
+  let zscore (ry-mean)/rms
+  let line 1 /where (zscore.gt.zscore_factor).or.(zscore.lt.-zscore_factor)
+  associate line line
+  !
+end procedure line_flagging
+
+
+begin procedure fft_focus
+    !
+    def int fft_len[8]
+    compute fft_len dimof fft_freqs
+    !
+    if exist(fft_focus) then
+       del /var fft_focus
+    endif
+    !
+    def real fft_focus['fft_len[1]',3] /global
+    def real fft_freq
+    !
+    ! run fft
+    fft
+    !
+    if exist(period) then
+       del /var period
+    endif
+    def real period /like R%FFT%X
+    def real fftx /like R%FFT%X
+    let fftx 1/R%FFT%X
+    def real period_power /like R%FFT%Y
+
+    def int dim[8]
+    compute dim dimof R%FFT%X
+
+    !
+    for i 1 to 'fft_len[1]'
+        let fft_focus[i,1] fft_freqs[i]
+        !
+        let period_power R%FFT%Y
+        let period abs(R%FFT%X-1/fft_focus[i,1])
+        !
+        sort period period_power period fftx
+        !
+        let fft_focus[i,2] fftx[1]
+        let fft_focus[i,3] period_power[1]
+    next
+end procedure fft_focus

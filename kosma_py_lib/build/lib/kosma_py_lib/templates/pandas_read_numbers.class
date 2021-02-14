@@ -1,0 +1,18 @@
+{# Local Variables: #}
+{# mode: jinja2 #}
+{# End: #}
+
+file in "{{ input_file }}"
+sic message class s-i
+
+set var user
+import sofia
+
+sic output "{{memory_dir}}/present_numbers.csv"
+find
+for i 1 to found
+say 'idx%num[i]'
+next
+sic output
+sic message class s+i
+exit

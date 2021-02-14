@@ -1,0 +1,92 @@
+{# Local Variables: #}
+{# mode: jinja2 #}
+{# End: #}
+
+file in "{{ input_file }}"
+
+say "getting spectra statistics (mean,median,max,min,rms,sum) data"
+
+
+if .not.exist(error_flag) then;
+   def int error_flag /global
+endif
+
+on error let error_flag 1
+
+set var user
+import sofia
+
+set unit v
+
+{% if windows != "" %}
+set window {{ windows }}
+{% endif %}
+
+
+
+
+find /all
+
+if SET%LAS%NWIND.eq.-1 then
+   say "ERROR: no windows set, no stats"
+   exit 0
+endif
+
+def real mean 
+def real median
+def real max
+def real min
+def real rms
+def real sum
+
+def real bad_channels
+def real fraction_bad_channels
+
+
+def real max_win
+def real min_win
+def real windows[2]
+def real blanks_count
+
+sic message class s-f
+sic message class -FEWRIU
+sic message sic -FEWRIU
+SIC MESSAGE GLOBAL ON
+
+sic output "{{memory_dir}}/pandas_stats.csv"
+
+say "index,number,version,stats_mean,stats_median,stats_max,stats_min,stats_rms,stats_sum,bad_channels,fraction_bad_channels"
+for i 1 to found
+    get n
+    ! 
+    for j 1 to SET%LAS%NWIND
+        let windows set%las%wind1[j] set%las%wind2[j]
+        compute max_win max windows
+        compute min_win min windows        
+        let ry R%HEAD%SPE%BAD /where rx.gt.min_win.and.rx.lt.max_win 
+    next j    
+    !
+    compute mean mean ry /blanking R%HEAD%SPE%BAD
+    compute median median  ry /blanking R%HEAD%SPE%BAD
+    compute max max ry /blanking R%HEAD%SPE%BAD
+    compute min min ry /blanking R%HEAD%SPE%BAD
+    compute rms rms ry /blanking R%HEAD%SPE%BAD
+    compute sum sum ry /blanking R%HEAD%SPE%BAD
+    !
+    get
+    let ry 0 /where ry.ne.R%HEAD%SPE%BAD    
+    let ry 1 /where ry.eq.R%HEAD%SPE%BAD
+    compute bad_channels sum ry
+    let fraction_bad_channels 'bad_channels/channels'
+    !    
+    if error_flag.eq.0 then
+        say 'IDX%IND[i]'","'number'","'R%HEAD%GEN%VER'","'mean'","'median'","'max'","'min'","'rms'","'sum'","'bad_channels'","'fraction_bad_channels'
+    else
+        say 'IDX%IND[i]'","'number'","'R%HEAD%GEN%VER'",  9999,9999,9999,9999,9999,9999,9999,9999"
+        let error_flag 0
+    endif
+    sic message class s+i    
+next
+
+sic output
+exit

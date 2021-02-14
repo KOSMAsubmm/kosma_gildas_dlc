@@ -1,0 +1,10 @@
+file in "/tmp/test_data.sofia"
+
+file out "cropped.sofia" single /overwrite
+find
+for i 1 to found
+   get n
+   extract 'velocity-100' 'velocity+100' v
+   resample * * = '0.3' v
+   write
+next

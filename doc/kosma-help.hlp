@@ -1,0 +1,590 @@
+1 Language KOSMA\ Gildas Extensions used in Cologne
+
+        DESPIKE      Despike a spectrum
+        FIND_META    Build an index based on filters of meta data
+        GET_META     Return unique meta data entries in an index
+        PLOT_GROUP   Plot index and average into groupings
+        FFT          Make 2 panel plot with FFT and data
+        FIND_POLY    Find spectra that fall into go view selection polygon
+        STRING_IN    Check is in a string in another string
+        GET_INDEX    Load meta data into a python pandas table
+        PLOT_INDEX   Plot meta data written by get_index
+        FILTER_INDEX Filter spectra that with a number of criteria
+        EXPORT       Simple script to export a spectra to a 4 column file
+        SPLINE       Routine to fit spline, store result, apply to spectra
+        WINDOWS      Apply line windows to spectra from map using assoc. array
+        FFT_FOCUS    Extract the FFT power for a given FFT channel
+
+
+
+1 WINDOWS 
+     [KOSMA\]WINDOWS [INPUT_CLASS_FILENAME]
+                     [INPUT_LMV_CUBE]
+                     [RMS_LEVEL]
+     
+     Generates a mask cube from input LMV cube based on RMS_LEVEL.
+     You should look at the LMV cube histogram before deciding on the RMS level
+     Function then runs through each spectra in INPUT_CLASS_FILENAME, 
+     finds the nearest spectra in the mask cube based on the coordinates
+     The mask spectra is then applied to the spectra as a line associate array
+     This is written to a new class file with the tag "masked".
+     This masked class files can be used for further baselining using the 
+     SET WINDOW /ASSOCIATED or SET WINDOW AUTO
+     
+1 FIND_POLY
+     [KOSMA\]FIND_POLY
+     
+     Find spectra based on polygon array generated from "go view" polygon
+     selection
+
+1 DESPIKE
+     [KOSMA\]DESPIKE /LENGTH [LENGTH] /cutoff [CUTOFF]
+                        /NOISE /USE_ASSOCIATED_ARRAY
+                        /LOOKUP_TABLE [LOOKUP_TABLE]
+                        /SMOOTH [SMOOTH_DATA_BEFORE]
+                        /ADDITIONAL_OPTIONS
+                        /BLANK_RANGES BLANK_RANGES
+    Usage: 
+    default flag found channels as bad
+      $ despike
+    default flag found channels write channels to associated_array
+      $ despike /use_associated_array
+    use a lookup table and write channels to associated array
+      $ despike /lookup_table data/despike_lookup_table.pkl /use_associated_array
+    blank channels from command line and write to an associated array
+      $ despike /blank_ranges 7000 8000 /blank_ranges 1000 3000  /use_associated_array
+    blank channels from command line and overwrite with noise
+      $ despike /blank_ranges 7000 8000 /blank_ranges 1000 3000  /noise
+
+
+    Options:
+      /help                 show this help message and exit
+      /length LENGTH        channel length of wavelet to convolve
+      /cutoff CUTOFF        threshold for standard deviation aroundrolling
+                            standard deviation
+      /noise                replace detected spurs with local noise
+      /use_associated_array
+                            use associated array to stored blanking postions
+      /lookup_table LOOKUP_TABLE
+                            use lookup table to apply spurs
+      /smooth SMOOTH_DATA_BEFORE
+                            run smooth routine on smoothed version of data, box
+                            width is the option
+      /plot                 show plot of detected spurs, only works with
+                            associated array active
+      /additional_options ADDITIONAL_OPTIONS
+                            additional options for internal routines, should
+                            format of 'offset=10'
+      /blank_ranges BLANK_RANGES
+                            manually added range "-b 100 200"; blank channels 100
+                            to 200
+
+1 FIND_META
+        [KOSMA\]FIND_META /META_FILTER [META_FILTER] /FILTER_PER [FILTER_PER]
+
+     Function to build an index based on filters of meta data. For example
+
+        LAS> KOSMA\find_meta /meta_filter "R%USER%SOFIA%AOR_ID in 0505"
+
+     This command will find all spectra with the string 0505 in the user sect-
+     ion parameter AOR_ID. Filter can be coupled together such as the follo-
+     wing example which would find all aor_id wiht 0505 in the string and
+     with a position angle greater between 140 degrees and 170 degrees:
+
+        LAS> KOSMA\find_meta /meta_filter "R%USER%SOFIA%AOR_ID in 0505"
+                             /meta_filter "R%USER%SOFIA%POSANGLE>140.0"
+                             /meta_filter "R%USER%SOFIA%POSANGLE<170.0"
+                             /meta_filter "R%USER%SOFIA%AOT_ID in array_otf"
+
+     In order to save time, the meta data complicity is checked for a single
+     spectra per scan. The assumption is that certain meta only changes per
+     scan number, it is possible to go to a finer granularity with the
+     /FILTER_PER option. There are 2 options, per scan (default) and per
+     subscan. The per subscan will take longer and should be used for
+     parameters that change on a subscan level.
+
+        LAS> KOSMA\find_meta /meta_filter "R%USER%SOFIA%AOR_ID in 0505"
+                             /filter_per subscan
+
+
+1 GET_META
+        [KOSMA\]GET_META /META_ENTRY [META_ENTRY] /FILTER_PER [FILTER_PER]
+
+     Function to return unique meta data entries in an index. The results
+     are written to an array in the kosma structure. For example
+
+        LAS> KOSMA\get_meta /meta_entry "R%USER%SOFIA%AOR_ID"
+
+     The unique data is then written to the array KOSMA.AOR_ID_UNIQUE. For
+     each unique meta parameter a new array is written to KOSMA structure.
+
+     In order to save time, the meta data is checked for a single
+     spectra per scan. The assumption is that certain meta only changes per
+     scan number, it is possible to go to a finer granularity with the
+     /FILTER_PER option. There are 2 options, per scan (default) and per
+     subscan. The per subscan will take longer and should be used for
+     parameters that change on a subscan level.
+
+        LAS> KOSMA\get_meta /meta_entry "R%USER%SOFIA%AOR_ID"
+                             /filter_per subscan
+
+     You can also search for unique combinations of paramters, for example
+     if you wanted to see what unique combinations of AOR_ID and PROJECT_ID
+        LAS> KOSMA\get_meta /meta_entry "R%USER%SOFIA%AOR_ID"
+                            /meta_entry "R%USER%SOFIA%MISSION_ID"
+
+     if you want the associated scan number run:
+        LAS> KOSMA\get_meta /meta_entry "R%USER%SOFIA%AOR_ID"
+                            /meta_entry "R%USER%SOFIA%MISSION_ID"
+                            /meta_entry "scan"
+
+
+1 FFT
+        [KOSMA\]FFT /OUTPUT_FILENAME [FILENAME or True]
+                    /MIN_FFT_PERIOD [Float]
+                    /MAX_FFT_PERIOD [Float]
+
+     Function to calculate FFT, using python/numpy libraries, of spectra currently selected.
+     If no OUTPUT_FILENAME is given then a 2 panel plot showing the data and the FFTS is show.
+     The FFT frequency scale is given in period and is in units of MHz. This is
+     independent of the unit selected using the "set unit" option. An Example command:
+
+        LAS> KOSMA\FFT /OUTPUT_FILENAME "/tmp/fft_test.png"
+                       /MIN_FFT_PERIOD 5.0
+                       /MAX_FFT_PERIOD 250.0
+
+     This example will write a 2 panel plot to the file fft_test.png between the period
+     range of 5.0 and 250.0 MHz.
+
+        LAS> KOSMA\FFT /OUTPUT_FILENAME True
+                       /MIN_FFT_PERIOD 5.0
+                       /MAX_FFT_PERIOD 250.0
+
+     In this example an automatic filename will be generated from the spectra header,
+     it has the following format:
+        fft_{0.source}_{0.line}_{0.telescope}_{0.scan}_{0.subscan}_{0.number}.png
+
+
+1 STRING_IN
+  [KOSMA\]STRING_IN STRING_TO_FIND  STRING_TO_SEARCH_IN
+  mimic of python "in" operator, check if string is in another string
+  for example 
+    LAS> KOSMA\STRING_IN TEST TEST1231231
+  sets the variable KOSMA%STRING_FOUND to True
+
+1 LOAD_ARRAY
+  [KOSMA\]LOAD_ARRAY FILENAME ARRAY_NAME
+  Load single column file of integers into an array
+
+1 WRITE_ARRAY
+  [KOSMA\]WRITE_ARRAY FILENAME ARRAY_NAME
+  Write a 1D array into a file
+
+
+1 FFT_FOCUS
+  [KOSMA\]FFT_FOCUS
+  Extract the FFT power for a given FFT channel.
+  The FFT power at nearest channel is written to 
+  written to fft_freqs array in the following format:
+   [chosen_freq, nearest_freq, fft_power]
+  example:
+      file in ffts_test.komsa
+      find
+      get f
+      !
+      def real fft_freqs[2] /global
+      let fft_freqs 160 80 ! check power at 160 and 80 MHz
+      @FFT_FOCUS
+      LAS> exa fft_focus[1,]
+           FFT_FOCUS[1,]   is a real Sub-Array of dimensions  3
+           160.0000  159.0601  57.04193
+
+1 PLOT_GROUP
+    [KOSMA\]PLOT_GROUP   /help                 show this help message and exit
+                         /group_by GROUP_BY 
+                         /divide_groups DIVIDE_GROUPS [INTEGER]
+                         /base [INTEGER]
+                         /smooth_box SMOOTH_BOX [INTEGER]
+                         /write_out_spectra
+                         /save_plot_per_group
+                         /output_folder OUTPUT_FOLDER
+                         /tag TAG
+                         /plot_type PLOT_TYPE
+                         
+
+  Function to generate average spectra of different groups.
+  Example commands:
+    LAS> plot_group /group_by telescope /group_by source
+                    /group_by subscan /smooth_box 20 /base 0
+    average spectra into unique groups of telescope, source, subscan
+    smooth box the average with a window of 20 and base 0 the averaged
+    spectra
+    
+    LAS> file out "group_by_average.kosma"
+    plot_group /group_by telescope /group_by source
+               /group_by subscan /smooth_box 20 /base 0
+               /write_out_spectra
+    same as previous exmaple but write out averaged spectra to
+    output file
+    
+    Additional options:
+    /divide_groups       [INTEGER] split groups into a number of subgroups
+    /save_plot_per_group save individuals plots per group to a file
+    /tag                 add additional tag to plot filenames
+    /plot_type           Different plot types available:
+                          'average': average all spectra in group together 
+                          'index_map': show index map of the group
+                          'stamp': show all spectra in a stamp plot
+
+1 GET_INDEX
+    [KOSMA\]GET_INDEX   /reload
+                        /input_file INPUT_FILE
+                        /parameter ADDITIONAL_META_PARAMETERS
+                        /get_rms
+                        /get_stats
+                        /output_file OUTPUT_FILE
+                        /get_stats_over_range GET_STATS_OVER_RANGE
+                        /generate_time_column
+                        /fft_focus_freq FFT_FOCUS_FREQ
+                        
+                        
+  Function to gather additional meta data on class spectra.
+  Data is written to a csv file per spectra. This data is then merged
+  into a python pandas table which can then be grouped, filtered and plotted
+  using python tools.
+  
+  Example usage:
+    file in test.kosma
+    set window 10 20
+    find
+    get_index /get_rms /get_stats /parameter tsys /paramter water
+              /ffts_focus_freq 160 /ffts_focus_freq 90
+  
+  Function will generate a pandas table with:
+      * a RMS column per spectra
+      * mean,median,max,min,std of each spectra
+      * water and tsys per spectra
+      * FFT power at 160 and 90 MHz
+  
+  The pandas table will be loaded if it is available. The reload option can
+  be used to regenerate the pandas index table
+  
+1 PLOT_INDEX
+    [KOSMA\]PLOT_INDEX   /xaxis XAXIS
+                         /yaxis YAXIS
+                         /group_by GROUP_BY
+                         /group_by_row GROUP_BY_ROW
+                         /reload
+                         /ylim YLIM
+                         /histogram HISTOGRAM
+                         /histogram_normalize
+                         /fit_gauss
+                         /save_filename SAVE_FILENAME
+                         /table_filters TABLE_FILTERS
+                         /reload_python_var
+                         /smooth_spectra SMOOTH_SPECTRA
+                         /plot_kwargs PLOT_KWARGS
+                         /only_histogram
+                         /n_columns N_COLUMNS
+                         
+   Function to plot output from get_index pandas table. Possible to plot
+   multiple parameters and histogram, possible to click on points and
+   look at individual spectra. group_by option allows different color
+   plots, group_by_row separated into rows
+   
+   Example usage:
+     # example plot rms (use /get_rms option to generate rms column)
+     plot_index /xaxis number /yaxis rms
+     
+     # example plot rms, groupby telescope
+     plot_index /xaxis number /yaxis rms /group_by telescope
+     
+     # example plot rms, groupby telescope, generate histogram with 
+     # 100 bins to a limit of 0 to 10
+     plot_index /xaxis number /yaxis rms /group_by telescope /ylim 0 10 -
+                /histogram 100
+     
+     # example plot rms, groupby telescope, generate histogram with 
+     # 100 bins a limit of 0 to 10 change points size in plot to 0.3
+     plot_index /xaxis number /yaxis rms /group_by telescope /ylim 0 10 -
+                /histogram 100 /plot_kwargs "{'s':0.3}"
+     
+     # example plot rms, groupby telescope, generate histogram 
+     # with 100 bins a limit of 0 to 10 change points size in plot to 0.3
+     plot_index /xaxis boff /yaxis rms /yaxis line_int_mean /group_by telescope -
+           /group_by source /group_by_row subscan -
+           /plot_kwargs "{'linestyle':'-'}" /histogram 10
+     
+     # example plot rms, groupby telescope, generate histogram with 100 bins a
+     # limit of 0 to 10 and only plot spectra with version number 7
+     plot_index /xaxis number /yaxis rms /group_by version /ylim 0 10 -
+                /histogram 500 /table_filters "version == 7"
+     
+     # example of group_by_row options and multiple parameters
+     # a plot row will be generated per source
+     # each plot will have a grouped by telescope
+     plot_index /xaxis number /yaxis rms /yaxis stats_mean
+                /group_by telescope /group_by_row source
+
+1 FILTER_INDEX
+    [KOSMA\]FILTER_INDEX   /table_filters TABLE_FILTERS
+                           /reload_python_var
+                           /reload
+                           /write_table
+                           /append_table
+                           /export_filename EXPORT_FILENAME
+                           /array_name ARRAY_NAME
+                           /apply_find_index
+                           /show_columns_available
+    
+    Function to generate filter of spectra numbers over a given threshold
+    This is useful when you want to crop out bad spectra and then use the
+    ignore command to drop this spectra from the index
+    
+    Example Usage:
+      # example plot rms, groupby telescope, generate histogram with 100 bins a limit of 0 to 10
+      # and only plot spectra with version number 7 and spectra with an rms greater than 3 time the mean rms
+      # write number to the file test_export.csv
+      filter_index  /table_filters "version == 7" /table_filters "rms>rms.mean()" 
+                    /write_table /export_filename test_export.csv
+      # filter index and write spectra numbers to the class array test_array
+      # filter scan equal to 1234, subscan > 2 and 
+      # where the rms is greater 3 time than the mean of the total rms
+      filter_index  /table_filters "scan == 1213 and subscan > 2" -
+                    /table_filters "rms>3*rms.mean()"
+                    /array_name test_array
+
+
+1 SPLINE
+    [KOSMA\]SPLINE
+    see tests in tests folder for more details
+    Options:
+      /help                 show this help message and exit
+      /fit_spline FIT_SPLINE
+      /spline_nodes SPLINE_NODES
+                            number of nodes to for spline fit, default 100
+      /smoothness_of_fit_data SMOOTHNESS_OF_FIT_DATA
+                            number of channels to smooth data per fitting spline
+      /logging_level LOGGING_LEVEL
+                            set logging level info
+      /show_plot SHOW_PLOT  show plot summarizing fit
+      /spline_archive_filename SPLINE_ARCHIVE_FILENAME
+                            file where splines templates are stored, stored in
+                            pandas table
+      /store_spline_in_archive
+                            store fitted spline in the archive
+      /scale_spline_from_archive
+                            check which spline in the archive give the best fit to
+                            the data
+      /plot PLOT            plot fitted spline choices: interactive,save_best,save
+                            _best_with_pickle,gildas_plot,none
+      /search_scan_range SEARCH_SCAN_RANGE
+                            range of scan numbers to look for spline
+      /output_plots_path OUTPUT_PLOTS_PATH
+                            path to save output plots to
+      /plots_tag PLOT_NAME_TAG
+                            additional string to identify different reduction
+      /spline_fit_type SPLINE_FIT_TYPE
+                            How to scale spline, either simply scale, or scale and
+                            shift frequency axis [+/- 150 MHz]
+
+
+
+
+1 PCA
+    [KOSMA\]PCA /OUTPUT [FOLDERNAME]
+                /N_COMPONENTS [Integer]
+                /CUTOFF [Float]
+                /PCA_SOURCE [SOURCENAME]
+                /WINDOW [LIST OF FLOATS]
+                /LINE_DETECTION [BOOLEAN]
+                /LOOK_AHEAD [Float]
+                /NOISE_CUTOFF [Integer]
+                /BLANK_LINE_CUTOFF [BOOLEAN]
+                /BLANK_LINE_FIT [BOOLEAN]
+                /ADD_SKY_DIFF [BOOLEAN]
+                /FINAL_RES [Float]
+                /XREF [Float]
+                /NX [Integer]
+                /E_RANGE [LIST of Floats]
+                /DECOMPOSITION [PCA, NMF, ICA] DEFAULT PCA
+                /EXPORT_COMPONENTS
+                /DUMP_EXP_VARIANCE [FILENAME]
+                /PCA_EXCLUDE_RANGE [LIST OF FLOATS]
+                /YAML_INPUT [FILENAME] DEPRECATED
+
+    Perform a PCA (or NMF, ICA) decomposition of a set of (secondary) spectra
+    (default: SKYDIFF) and subtract the derived components from the
+    science data. The corrected spectra are written to the active output file
+    that has to be defined before running the command. Also the input data has
+    to be loaded before the command, e.g.:
+
+        LAS> file in INPUT_FILE
+        LAS> file out OUTPUT_FILE single|multiple [/OVERWRITE]
+        LAS> pca ...
+
+    The PCA command loops over all spectra of the INPUT_FILE.
+
+    The default set that is used to derive components are the spectra with the
+    source name "SKYDIFF". These can be derived from kalibrate by setting the
+    option "-m skydiff". If this option is used kalibrate generates spectra by
+    using subsequent OFF observations to generate ON-OFF like spectra only
+    using OFF-OFF. This results in spectra that do not contain information of
+    the science source but contain all information about the receiver and
+    antenna performance. The 'skydiff' option of kalibrate takes an integer
+    which controls how previous OFF observations should be used to derive the
+    OFF-OFF spectra. In our testing 20 proved to be a sensible number. To
+    prepare data for the use with this pca command one can use
+    kalibrate as such:
+
+        >>> kalibrate ... -m skydiff 20 ...
+
+    For on-the-fly chopped data another option is present in kalibrate to
+    produce difference spectra between the different off-chop spectra this can
+    be activated by using:
+
+        >>> kalibrate ... -m skychopdiff ...
+
+    This option writes out the first chooped off SKY-all subsequent sky
+    observations for a OTF scan.
+
+    The set of spectra that are used to derived the PCA components can be
+    controlled by the "/PCA_SOURCE" option. Per default this is set to
+    "SKYDIFF" and would take all spectra with this source name to derive
+    compoments for each distinct "telescope" (GILDAS nomenclature for
+    frontend-backend combination) in the input file. To change the data to
+    be used for the pca decomposition use e.g.:
+
+        LAS> pca /pca_source SKYCHOPDIFF
+
+    However in some circumstances very good results can be obtained if the
+    science data itself is used to derive the components and then subtract the
+    components from the science data itself. This is only possible if one is
+    lucky and no source information enters into the components that are
+    subtracted and the derived components have to examined carefully to check
+    that one does not do harm to the spectra. To use Sousrce with a names
+    SOURCE name use e.g.:
+
+        LAS> pca /pca_source SOURCENAME
+
+
+
+
+
+    REMARK: A Boolean option just has to be present in the command with no
+    arguments, e.g. to activate the "/line_detection" option use:
+
+        LAS> pca /line_detection
+
+    Options:
+
+    /OUTPUT             The pca reduction algorithm can create "diagnostic"
+                        plots. If the output option is set the plots are created
+                        in the folder with the name given to this option
+                        DEFAULT: False
+
+    /N_COMPONENTS       Controls the number of pca components that are derived
+                        from the spectra that are to be used to derive the pca
+                        components. The default are the spectra with source
+                        name SKY-DIFF but the input can be controlled with
+                        the `/pca_source option`
+                        DEFAULT: 5
+
+    /CUTOFF             The PCA algorithm in astroML derives an
+                        "explained_variance_ratio" (EVR) for each component.
+                        The cutoff controls down to which EVR a component
+                        should be taken into account. If this option is not set
+                        (set to False) not set all components are taken into
+                        account.
+                        DEFAULT: False
+
+    /PCA_SOURCE         Controls the source name of the spectra to be used for
+                        the derivation of the PCA components (DEFAULT=SKY-DIFF).
+
+
+    /WINDOW             Set a line window. This window is used in multiple
+                        places. The line detection in the PCA decompositon
+                        input data as well as the line detection in the
+                        corrected data.
+
+    /LINE_DETECTION     BOOLEAN flag. This activates a rudimentary test to
+                        detect if there is a line in the spectra used to derive
+                        the PCA components. If there is a line detected the
+                        spectrum is not used. The decision if there is a
+                        line depends on the noise_cutoff value and the
+                        line window set with "/window". If there are
+                        more than 3 channels in the line_window set with
+                        `/window` are higher than `noise_cutoff * the RMS
+                        of the spectrum` the spectrum is dropped.
+
+    /LOOK_AHEAD         Set the resolution that should be used to detect a line
+                        in the spectra. The idea is that a line is better to
+                        detect at a lower velocity resolution. The detection
+                        will be done at this resolution.
+
+    /NOISE_CUTOFF       The integer cutoff value that controls
+                        until which maximum value a channel inside the input
+                        spectra to the pca decomposition are considered emission
+                        free
+
+    /BLANK_LINE_CUTOFF  This option controls the line detection in the
+                        corrected spectra
+
+    /BLANK_LINE_FIT     Controls if the spectra that have to be corrected
+                        are altered when fitted to the components such that all
+                        channels within the line window are set to an artificial
+                        rms with an rms vlaue of that which is measured in this
+                        spectrum outside of the line.
+
+    /ADD_SKY_DIFF       Add `SKY-DIFF` data to the PCA input spectra.
+                        Can be used if `/pca_source` is set to another source
+                        than `SKY-DIFF` to use the SKY-DIFF data in addition to
+                        derive pca components
+                        (Experimental option).
+
+    /FINAL_RES          The code can do an intrinsic resample of the spectra.
+                        This option sets the final velocity resolution and
+                        activates the resampling. To control the new number of
+                        channels and the new reference channel please also
+                        define /xref and /nx.
+
+    /XREF               The new reference channel for the intrinsic
+                        resample command. Only active if /FINAL_RES is set
+                        DEFAULT: "*"
+
+    /NX                 The new number of channels for the intrinsic resample
+                        command. Only active if /FINAL_RES is set.
+                        DEFAULT: "*"
+
+    /E_RANGE            Range that is to be extracted from the spectra
+
+    /DECOMPOSITION      Actually not only the PCA decomposition is possible but
+                        also ica or nmf
+
+    /EXPORT_COMPONENTS  Write the pca components as class spectra to the
+                        output file. The source names are set to `pca_comp_N`.
+                        Where N is the number of the components in the order
+                        they are derived by the PCA decomposition.
+    /DUMP_EXP_VARIANCE  Write the "explained variance ratios" to a file.
+
+    /PCA_EXCLUDE_RANGE  EXPERIMENTAL: Takes a two velocities, like a
+                        line window, and cuts this region out from the
+                        PCA_SOURCE spectra.
+
+                        It produces an artificial spectrum that is shorter than
+                        the original by the specified range, by concatenating
+                        the remaining parts. To fit the shorter components
+                        to the SOURCE spectra it does the same and after wards
+                        includes the unaltered region back into the corrected
+                        spectrum. In the overview plots the region is filled
+                        with zeroes in the component, to make the plot align.
+
+    /CHANNEL_LINE_WIDTH Set the criterium of how many channels in line window
+                        have to be over `noise_cutoff` * sigma to be dropped.
+
+    /YAML_INPUT         TO BE DEPRECATED. Control which pixel and scan which
+                        of the derived components should be used. This option
+                        is still active but will most like be dropped.
+
+
+1 ENDOFHELP

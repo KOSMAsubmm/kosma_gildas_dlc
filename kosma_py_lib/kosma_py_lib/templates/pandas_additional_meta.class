@@ -1,0 +1,26 @@
+{# Local Variables: #}
+{# mode: jinja2 #}
+{# End: #}
+
+file in "{{ input_file }}"
+
+
+sic message class s-f
+sic message class -FEWRIU
+sic message sic -FEWRIU
+SIC MESSAGE GLOBAL ON
+
+set var user
+import sofia
+
+find /all
+sic output "{{memory_dir}}/pandas_additional_meta.csv"
+
+for i 1 to found
+    get n
+    say {{ meta_params|join("\"|\"") }}
+next
+
+sic message class s+i
+sic output
+exit

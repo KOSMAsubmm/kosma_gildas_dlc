@@ -1,0 +1,8 @@
+@kosma-init
+file in "data/multiline.kosma"
+find
+set unit v
+set win 0 1
+
+get_index /get_rms /get_stats /parameter tau_signal /reload
+exit

@@ -1,0 +1,29 @@
+{# Local Variables: #}
+{# mode: jinja2 #}
+{# End: #}
+
+file in "{{ input_file }}"
+!sic message class s-i
+
+sic message class s-f
+sic message class -FEWRIU
+sic message sic -FEWRIU
+SIC MESSAGE GLOBAL ON
+
+set var user
+import sofia
+
+sic output "{{memory_dir}}/idx.csv"
+
+{% if start_from_number is defined %}
+find /number {{ start_from_number }} *
+{% else %}
+find /all
+{% endif %}
+
+for i 1 to found
+say 'IDX%IND[i]'","'idx%num[i]'","'abs(idx%ver[i])'","'idx%teles[i]'","'idx%scan[i]'","'idx%subscan[i]'","'idx%boff[i]'","'idx%loff[i]'","'idx%line[i]'","'idx%sourc[i]'
+next
+sic message class s+i
+sic output
+exit

@@ -1,0 +1,62 @@
+@kosma-init
+file in data/single_array_test_data.sofia
+
+set unit c
+set win 0 1
+set mode y -150 150
+find
+
+def char*10[3] arrays
+let arrays LFAH LFAV HFAV
+
+set source NGC*
+
+
+!for array /in arrays
+!  set telescope *'array'*
+!  find
+!  exa found
+!  if found.gt.0 then
+!    plot_group /group_by telescope 
+!    plot_group /group_by telescope /group_by scan /group_by subscan /base 0 /tag 'array'
+!    plot_group /group_by scan /group_by subscan /save_plot_per_group /output_folder "/tmp/" /base 0 /tag 'array'_test
+!    set box 0 0 0 0 
+!    clear
+!    plot_group /group_by scan /group_by subscan /group_by source /save_plot_per_group /output_folder "/tmp/" /base 0 /tag 'array'
+!    plot_group /group_by telescope /group_by scan /group_by subscan /group_by source /save_plot_per_group /output_folder "/tmp/" /base 0 /tag 'array'
+!    !plot_group /group_by telescope /group_by scan /group_by subscan /group_by source /save_plot_per_group /output_folder "/tmp/" /plot_type index_map /base 0 /tag 'array'
+!  endif
+!next
+!exit
+
+! loop per scan
+set def
+find
+def struct list_master
+list /toc scan subscan source /var list_master
+set mode y -150 150
+set unit c
+set win 0 1
+
+
+for array /in arrays
+  for i 1 to list_master%NSETUP
+     set scan 'list_master%SETUP[i,1]' 'list_master%SETUP[i,1]'
+     set subscan 'list_master%SETUP[i,2]' 'list_master%SETUP[i,2]'
+     set source 'list_master%SETUP[i,3]' 'list_master%SETUP[i,3]'
+     set telescope *'array'*
+     find
+     if found.gt.0 then
+       plot_group /group_by number /group_by telescope /smooth_box 10 /base 0
+       ha "/tmp/plot_group_per_number_"'array'_'source'_'scan'_'subscan'".png" /device png /overwrite
+       clear
+       find
+       ! map index
+       if found.gt.7 then
+           plot_group /group_by telescope /plot_type index_map
+           ha "/tmp/plot_group_per_index_"'array'_'source'_'scan'_'subscan'".png" /device png /overwrite
+       endif
+       clear
+     endif
+  next
+next

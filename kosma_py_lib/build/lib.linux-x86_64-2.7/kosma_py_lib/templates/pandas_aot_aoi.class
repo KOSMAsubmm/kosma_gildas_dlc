@@ -1,0 +1,24 @@
+{# Local Variables: #}
+{# mode: jinja2 #}
+{# End: #}
+
+file in "{{ input_file }}"
+
+sic message class s-f
+sic message class -FEWRIU
+sic message sic -FEWRIU
+SIC MESSAGE GLOBAL ON
+
+set var user
+import sofia
+
+sic output "{{memory_dir}}/scan_aot_aor.csv"
+{% for scan in scans %}
+find /scan {{ scan }} {{ scan }}
+get f
+say 'idx%scan[i]'","'r%user%sofia%aot_id'","'r%user%sofia%aor_id'
+sic message class s+i
+{% endfor %}
+
+sic output
+exit

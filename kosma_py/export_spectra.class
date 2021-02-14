@@ -1,0 +1,27 @@
+!say "hello world"
+
+def char*1000 export_filename
+if 'pro%NARG'.eq.0
+    let export_filename 'kosma%output_folder'"spectra_"'scan'"_"'subscan'"_"'telescope'"_"'number'".out"
+else
+    let export_filename 'pro%arg[1]' 
+endif
+
+
+set unit v
+def double vx /like rx
+let vx rx
+set unit f
+def double fx /like rx
+
+
+say "exporting to "'export_filename'
+sic output 'export_filename'
+
+! TODO export header info aswell
+! columns: velocity, frequency, if_frequency, intensity
+for i 1 to channels
+   say 'vx[i]'","'frequency+fx[i]'","'R%HEAD%SPE%fres*i-R%HEAD%SPE%fres/2'","'ry[i]'
+next
+sic output
+say "finished exporting to "'export_filename'

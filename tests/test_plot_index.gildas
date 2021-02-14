@@ -1,0 +1,11 @@
+@kosma-init
+file in "data/spline_test_data.kosma"
+find
+set unit v
+set win 0 1
+
+on error exit
+
+get_index /get_rms /get_stats /parameter tau_signal /get_integrated_intensity 0 50 /reload
+plot_index /xaxis number /yaxis line_int_mean /yaxis line_int_total /yaxis line_int_per_kms /group_by_row subscan /group_by telescope /save_filename tmp/test_subscan.png
+plot_index /xaxis number /yaxis line_int_mean /yaxis line_int_total /yaxis line_int_per_kms /group_by_row subscan /group_by telescope /histogram 100 /save_filename tmp/test_subscan.png

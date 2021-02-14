@@ -1,0 +1,5 @@
+pandas==0.22
+jinja2
+pyyaml
+sklearn
+astroML
